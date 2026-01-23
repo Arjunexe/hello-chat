@@ -13,7 +13,8 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null); // Handle Image Upload (Preview only for now)
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -23,11 +24,15 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
   };
 
   async function handleSubmit() {
+    if (isSubmitting) return; // Prevent double-submit
+
     try {
       if (!title.trim()) {
         alert("Title is required");
         return;
       }
+
+      setIsSubmitting(true);
       let finalImageUrl: string | null = null;
       if (imageFile) {
         // Compress image before upload (max 4MB, max 1920px, 80% quality)
@@ -65,6 +70,8 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
     } catch (error) {
       console.log("error during handleUpload: ", error);
       alert("Network error. Please check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -174,9 +181,10 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
           </button>
           <button
             onClick={handleSubmit}
-            className="bg-purple-600 hover:bg-purple-500 text-white px-6 py-2 rounded-lg text-sm font-medium shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all transform active:scale-95"
+            disabled={isSubmitting}
+            className={`bg-purple-600 text-white px-6 py-2 rounded-lg text-sm font-medium shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all transform ${isSubmitting ? 'opacity-60 cursor-not-allowed' : 'hover:bg-purple-500 active:scale-95'}`}
           >
-            Post Topic
+            {isSubmitting ? "Posting..." : "Post Topic"}
           </button>
         </div>
       </div>
