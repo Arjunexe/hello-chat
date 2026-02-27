@@ -1,8 +1,9 @@
-import mongoose, { model, models, Schema, Document } from "mongoose";
+import mongoose, { model, Schema, Document } from "mongoose";
 
 export interface IComment extends Document {
   threadId: mongoose.Types.ObjectId;
   authorId: mongoose.Types.ObjectId;
+  parentId: mongoose.Types.ObjectId | null;
   text: string;
   likes: mongoose.Types.ObjectId[];
   createdAt: Date;
@@ -23,6 +24,12 @@ const CommentSchema = new Schema<IComment>(
       required: true,
     },
 
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment",
+      default: null,
+    },
+
     text: {
       type: String,
       required: true,
@@ -40,6 +47,14 @@ const CommentSchema = new Schema<IComment>(
   { timestamps: true },
 );
 
-const Comment = models.Comment || model<IComment>("Comment", CommentSchema);
+// Index for efficient querying of comments by thread
+CommentSchema.index({ threadId: 1, createdAt: 1 });
+
+// Force re-register model to pick up schema changes during hot reload
+if (mongoose.models.Comment) {
+  delete mongoose.models.Comment;
+}
+
+const Comment = model<IComment>("Comment", CommentSchema);
 
 export default Comment;

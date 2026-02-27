@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getThreadById } from "../action";
+import { getThreadById, getUserBookmarkIds } from "../action";
 import { auth } from "@/auth";
 import CommentForm from "./CommentForm";
+import CommentItem from "./CommentItem";
 import ShareButton from "./ShareButton";
+import ThreadImage from "./ThreadImage";
+import BookmarkButton from "./BookmarkButton";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -56,7 +59,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function ThreadExpand({ params }: PageProps) {
-  // Get session (optional - guests can view)
   const session = await auth();
 
   const { id } = await params;
@@ -65,6 +67,10 @@ export default async function ThreadExpand({ params }: PageProps) {
   if (!thread) {
     return notFound();
   }
+
+  // Check if bookmarked
+  const bookmarkIds = session?.user?.id ? await getUserBookmarkIds() : [];
+  const isBookmarked = bookmarkIds.includes(thread.id);
 
   // Format relative time
   const formatTime = (dateString?: string) => {
@@ -123,28 +129,8 @@ export default async function ThreadExpand({ params }: PageProps) {
               {thread.title}
             </p>
 
-            {/* Big Expanded Image with Blurred Background Fill */}
             {thread.image && (
-              <div className="relative rounded-xl overflow-hidden border border-white/10 h-[400px] md:h-[500px]">
-                {/* Blurred background fill */}
-                <div
-                  className="absolute inset-0 scale-110"
-                  style={{
-                    backgroundImage: `url(${thread.image})`,
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    filter: 'blur(20px)',
-                  }}
-                />
-                {/* Dark overlay to soften the blur */}
-                <div className="absolute inset-0 bg-black/30" />
-                {/* Actual image - fits fully without cropping */}
-                <img
-                  src={thread.image}
-                  alt="Thread attachment"
-                  className="relative z-10 w-full h-full object-contain"
-                />
-              </div>
+              <ThreadImage src={thread.image} alt={thread.title} />
             )}
 
             {thread.content && (
@@ -156,9 +142,16 @@ export default async function ThreadExpand({ params }: PageProps) {
           <div className="px-6 py-4 bg-black/20 border-t border-white/5 flex items-center justify-between">
             <div className="flex gap-6 text-sm text-neutral-400">
               <span>{thread.likeCount || 0} Likes</span>
-              <span>{thread.comments?.length || 0} Comments</span>
+              <span>{thread.commentCount || 0} Comments</span>
             </div>
-            <ShareButton threadId={thread.id} title={thread.title} />
+            <div className="flex items-center gap-2">
+              <BookmarkButton
+                threadId={thread.id}
+                initialBookmarked={isBookmarked}
+                isLoggedIn={!!session}
+              />
+              <ShareButton threadId={thread.id} title={thread.title} />
+            </div>
           </div>
         </div>
 
@@ -167,31 +160,23 @@ export default async function ThreadExpand({ params }: PageProps) {
           <CommentForm threadId={thread.id} isLoggedIn={!!session} />
         </div>
 
-        {/* --- COMMENTS SECTION --- */}
+        {/* --- COMMENTS SECTION (Nested) --- */}
         <div className="mt-8">
           <h3 className="text-lg font-semibold mb-4 text-purple-200">Comments</h3>
 
           <div className="space-y-4">
-            {thread.comments?.length === 0 ? (
+            {(!thread.comments || thread.comments.length === 0) ? (
               <p className="text-neutral-500 italic">
                 No comments yet. Be the first!
               </p>
             ) : (
-              thread.comments?.map((comment) => (
-                <div
+              thread.comments.map((comment) => (
+                <CommentItem
                   key={comment.id}
-                  className="p-4 rounded-xl bg-white/5 border border-white/5"
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-medium text-purple-400">
-                      @{comment.user}
-                    </span>
-                    <span className="text-xs text-neutral-600">
-                      {formatTime(comment.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-neutral-300">{comment.text}</p>
-                </div>
+                  comment={comment}
+                  threadId={thread.id}
+                  isLoggedIn={!!session}
+                />
               ))
             )}
           </div>

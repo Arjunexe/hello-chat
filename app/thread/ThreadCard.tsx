@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { deleteThreadAction, toggleLikeAction } from "./action";
+import { deleteThreadAction, toggleLikeAction, toggleBookmark } from "./action";
+import { useToast } from "@/components/Toast";
+import ImageLightbox from "@/components/ImageLightbox";
 
 type Thread = {
   id: string;
@@ -20,10 +22,13 @@ type Thread = {
 type ThreadCardProps = {
   thread: Thread;
   currentUserId?: string | null;
+  isBookmarked?: boolean;
+  isLoggedIn?: boolean;
 };
 
-export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
+export default function ThreadCard({ thread, currentUserId, isBookmarked: initialBookmarked = false, isLoggedIn = false }: ThreadCardProps) {
   const router = useRouter();
+  const toast = useToast();
 
   // Initialize liked state based on whether currentUserId is in likedBy array
   const initialLiked = currentUserId ? (thread.likedBy || []).includes(currentUserId) : false;
@@ -34,6 +39,9 @@ export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [bookmarked, setBookmarked] = useState(initialBookmarked);
+  const [isBookmarking, setIsBookmarking] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isAuthor = currentUserId && thread.authorId && currentUserId === thread.authorId;
@@ -71,7 +79,7 @@ export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
       // Revert on error
       setLiked(wasLiked);
       setLikeCount(prevCount);
-      alert(result.error);
+      toast.error(result.error);
     } else if (result.success) {
       // Sync with server response
       setLiked(result.liked);
@@ -85,7 +93,7 @@ export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
     setIsDeleting(true);
     const result = await deleteThreadAction(thread.id);
     if (result.error) {
-      alert(result.error);
+      toast.error(result.error);
       setIsDeleting(false);
       setShowConfirm(false);
     }
@@ -204,11 +212,18 @@ export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
               </div>
 
               {thread.image && (
-                <div className="shrink-0 w-full md:w-32">
+                <div
+                  className="shrink-0 w-full md:w-32 cursor-zoom-in"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLightboxOpen(true);
+                  }}
+                >
                   <img
                     src={thread.image}
                     alt="Topic attachment"
-                    className="w-full h-48 md:h-32 rounded-xl object-cover border border-white/10 bg-white/5"
+                    className="w-full h-48 md:h-32 rounded-xl object-cover border border-white/10 bg-white/5 hover:border-purple-500/40 transition-colors"
                   />
                 </div>
               )}
@@ -298,8 +313,42 @@ export default function ThreadCard({ thread, currentUserId }: ThreadCardProps) {
               </>
             )}
           </button>
+
+          {/* BOOKMARK BUTTON */}
+          <button
+            onClick={async () => {
+              if (!isLoggedIn) {
+                toast.info("Login to bookmark threads");
+                return;
+              }
+              if (isBookmarking) return;
+              const prev = bookmarked;
+              setBookmarked(!prev);
+              setIsBookmarking(true);
+              const result = await toggleBookmark(thread.id);
+              if (result.error) {
+                setBookmarked(prev);
+                toast.error(result.error);
+              } else if (result.success) {
+                setBookmarked(result.bookmarked);
+              }
+              setIsBookmarking(false);
+            }}
+            className={`group/save flex items-center gap-1.5 p-2 rounded-lg hover:bg-white/5 transition-colors ml-auto ${bookmarked ? 'text-yellow-400' : ''}`}
+          >
+            <BookmarkIcon filled={bookmarked} className={`w-4 h-4 transition-transform ${bookmarked ? 'text-yellow-400' : 'text-white/60 group-hover/save:text-yellow-400'}`} />
+          </button>
         </div>
       </div>
+
+      {/* Image Lightbox */}
+      {lightboxOpen && thread.image && (
+        <ImageLightbox
+          src={thread.image}
+          alt={thread.title}
+          onClose={() => setLightboxOpen(false)}
+        />
+      )}
     </>
   );
 }
@@ -420,6 +469,29 @@ function CheckIcon({ className }: { className?: string }) {
       className={className}
     >
       <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({
+  className,
+  filled,
+}: {
+  className?: string;
+  filled: boolean;
+}) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill={filled ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />
     </svg>
   );
 }

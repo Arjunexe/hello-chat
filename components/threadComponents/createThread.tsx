@@ -2,6 +2,7 @@
 
 import { createThreadAction } from "@/app/thread/action";
 import { compressImage } from "@/lib/compressImage";
+import { useToast } from "@/components/Toast";
 import { useState, ChangeEvent } from "react";
 
 interface CreateThreadModalProps {
@@ -14,6 +15,8 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const toast = useToast();
+
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -23,28 +26,24 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
   };
 
   async function handleSubmit() {
-    if (isSubmitting) return; // Prevent double-submit
+    if (isSubmitting) return;
 
     try {
       if (!title.trim()) {
-        alert("Title is required");
+        toast.error("Title is required");
         return;
       }
 
       setIsSubmitting(true);
       let finalImageUrl: string | null = null;
       if (imageFile) {
-        // Compress image before upload (max 4MB, max 1920px, 80% quality)
         let fileToUpload = imageFile;
-        console.log("[DEBUG] Starting compression...", imageFile.size);
         try {
           fileToUpload = await compressImage(imageFile, 4, 1920, 0.8);
-          console.log("[DEBUG] Compression complete", fileToUpload.size);
         } catch (compressError) {
           console.error("Compression failed, using original:", compressError);
         }
 
-        console.log("[DEBUG] Starting Cloudinary upload...");
         const formData = new FormData();
         formData.append("image", fileToUpload);
 
@@ -53,40 +52,35 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
           body: formData,
         });
         const uploadResult = await response.json();
-        console.log("[DEBUG] Upload result:", uploadResult);
 
-        // Show specific upload error
         if (!uploadResult.success) {
-          alert(uploadResult.error || "Image upload failed");
+          toast.error(uploadResult.error || "Image upload failed");
           return;
         }
         finalImageUrl = uploadResult.url;
       }
 
-      console.log("[DEBUG] Creating thread with image URL:", finalImageUrl);
       const result = await createThreadAction({
         title: title,
         content: content,
         imageUrl: finalImageUrl,
       });
-      console.log("[DEBUG] Thread creation result:", result);
 
       if (result?.error) {
-        alert(result.error);
+        toast.error(result.error);
       } else {
-        // Close modal on success - page will refresh due to revalidatePath
+        toast.success("Topic posted!");
         onClose();
       }
     } catch (error) {
-      console.log("error during handleUpload: ", error);
-      alert("Network error. Please check your connection and try again.");
+      console.error("Error during post:", error);
+      toast.error("Network error. Please check your connection and try again.");
     } finally {
       setIsSubmitting(false);
     }
   }
 
   return (
-    // 1. Backdrop (covers the whole screen)
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-0 md:p-4"
       onClick={onClose}
@@ -171,7 +165,10 @@ export default function CreateThreadModal({ onClose }: CreateThreadModalProps) {
                   className="w-full h-48 object-cover"
                 />
                 <button
-                  onClick={() => setSelectedImage(null)}
+                  onClick={() => {
+                    setSelectedImage(null);
+                    setImageFile(null);
+                  }}
                   className="absolute top-2 right-2 bg-black/50 p-1 rounded-full text-white hover:bg-red-500/80 transition-colors"
                 >
                   ✕
