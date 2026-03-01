@@ -112,6 +112,7 @@ export async function getThreadsPaginated(cursor?: string, limit: number = THREA
 export type CommentNode = {
   id: string;
   user: string;
+  authorId: string;
   text: string;
   parentId: string | null;
   createdAt: string;
@@ -169,6 +170,7 @@ export async function getThreadById(id: string) {
     const flatComments = typedComments.map((c) => ({
       id: c._id.toString(),
       user: c.authorId?.username || "Unknown",
+      authorId: c.authorId?._id?.toString() || "",
       text: c.text || "",
       parentId: c.parentId ? c.parentId.toString() : null,
       createdAt: c.createdAt?.toISOString() || new Date().toISOString(),
@@ -251,6 +253,48 @@ export async function addComment(data: AddCommentData) {
     return { success: true, commentId: newComment._id.toString() };
   } catch (error) {
     console.error("Error adding comment:", error);
+    return { error: "System Error: Please try again later." };
+  }
+}
+
+export async function deleteCommentAction(commentId: string, threadId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: "You must be logged in to delete a comment" };
+  }
+
+  try {
+    await connectDB();
+
+    if (!mongoose.Types.ObjectId.isValid(commentId)) {
+      return { error: "Invalid comment ID" };
+    }
+
+    const comment = await Comment.findById(commentId);
+    if (!comment) {
+      return { error: "Comment not found" };
+    }
+
+    if (comment.authorId.toString() !== session.user.id) {
+      return { error: "You can only delete your own comments" };
+    }
+
+    // Recursively delete all child comments
+    async function deleteChildren(parentId: string) {
+      const children = await Comment.find({ parentId });
+      for (const child of children) {
+        await deleteChildren(child._id.toString());
+        await Comment.findByIdAndDelete(child._id);
+      }
+    }
+
+    await deleteChildren(commentId);
+    await Comment.findByIdAndDelete(commentId);
+
+    revalidatePath(`/thread/${threadId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting comment:", error);
     return { error: "System Error: Please try again later." };
   }
 }

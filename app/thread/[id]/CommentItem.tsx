@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { type CommentNode } from "../action";
+import { useRouter } from "next/navigation";
+import { type CommentNode, deleteCommentAction } from "../action";
 import CommentForm from "./CommentForm";
 import MentionText from "@/components/MentionText";
 
@@ -9,6 +10,7 @@ interface CommentItemProps {
     comment: CommentNode;
     threadId: string;
     isLoggedIn: boolean;
+    currentUserId?: string | null;
     depth?: number;
 }
 
@@ -23,10 +25,14 @@ const THREAD_COLORS = [
     "border-amber-500/50 hover:border-amber-400",
 ];
 
-export default function CommentItem({ comment, threadId, isLoggedIn, depth = 0 }: CommentItemProps) {
+export default function CommentItem({ comment, threadId, isLoggedIn, currentUserId, depth = 0 }: CommentItemProps) {
+    const router = useRouter();
     const [showReplyForm, setShowReplyForm] = useState(false);
     const [collapsed, setCollapsed] = useState(false);
+    const [deleting, setDeleting] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
 
+    const isOwner = currentUserId && comment.authorId === currentUserId;
     const threadColor = THREAD_COLORS[depth % THREAD_COLORS.length];
 
     const formatTime = (dateString: string) => {
@@ -43,6 +49,32 @@ export default function CommentItem({ comment, threadId, isLoggedIn, depth = 0 }
         if (diffDays < 7) return `${diffDays}d`;
         return date.toLocaleDateString();
     };
+
+    const handleDelete = async () => {
+        setDeleting(true);
+        try {
+            const result = await deleteCommentAction(comment.id, threadId);
+            if (result.error) {
+                alert(result.error);
+                setDeleting(false);
+                setConfirmDelete(false);
+            } else {
+                router.refresh();
+            }
+        } catch (err) {
+            alert("Failed to delete comment");
+            setDeleting(false);
+            setConfirmDelete(false);
+        }
+    };
+
+    if (deleting) {
+        return (
+            <div className="py-2 text-neutral-600 text-xs italic">
+                Deleting…
+            </div>
+        );
+    }
 
     return (
         <div className="group/thread">
@@ -101,6 +133,35 @@ export default function CommentItem({ comment, threadId, isLoggedIn, depth = 0 }
                                 {showReplyForm ? "Cancel" : "Reply"}
                             </button>
                         )}
+                        {isOwner && !confirmDelete && (
+                            <button
+                                onClick={() => setConfirmDelete(true)}
+                                className="text-[11px] text-neutral-500 hover:text-red-400 transition-colors flex items-center gap-1 font-medium"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                                Delete
+                            </button>
+                        )}
+                        {confirmDelete && (
+                            <span className="flex items-center gap-2 text-[11px]">
+                                <span className="text-red-400">Delete?</span>
+                                <button
+                                    onClick={handleDelete}
+                                    className="text-red-400 hover:text-red-300 font-bold transition-colors"
+                                >
+                                    Yes
+                                </button>
+                                <button
+                                    onClick={() => setConfirmDelete(false)}
+                                    className="text-neutral-500 hover:text-neutral-300 font-medium transition-colors"
+                                >
+                                    No
+                                </button>
+                            </span>
+                        )}
                     </div>
 
                     {/* Inline reply form */}
@@ -136,6 +197,7 @@ export default function CommentItem({ comment, threadId, isLoggedIn, depth = 0 }
                                     comment={child}
                                     threadId={threadId}
                                     isLoggedIn={isLoggedIn}
+                                    currentUserId={currentUserId}
                                     depth={depth + 1}
                                 />
                             </div>

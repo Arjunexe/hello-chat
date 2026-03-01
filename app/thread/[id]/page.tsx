@@ -176,6 +176,7 @@ export default async function ThreadExpand({ params }: PageProps) {
                   comment={comment}
                   threadId={thread.id}
                   isLoggedIn={!!session}
+                  currentUserId={session?.user?.id ?? null}
                 />
               ))
             )}
