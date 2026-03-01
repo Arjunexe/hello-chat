@@ -67,8 +67,8 @@ export default async function ChatroomDetailPage({ params }: ChatroomDetailPageP
         >
             <div className="w-full max-w-3xl flex-1 flex flex-col">
                 {/* Room info bar */}
-                <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-neutral-900/40 border border-white/5 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600/30 to-purple-800/30 border border-purple-500/20 flex items-center justify-center text-purple-300 font-bold text-sm">
+                <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl bg-neutral-900/40 border border-white/5 mb-2 sm:mb-3">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-purple-600/30 to-purple-800/30 border border-purple-500/20 flex items-center justify-center text-purple-300 font-bold text-xs sm:text-sm">
                         {chatroom.name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -83,7 +83,7 @@ export default async function ChatroomDetailPage({ params }: ChatroomDetailPageP
                 </div>
 
                 {/* Chat window */}
-                <div className="flex-1 rounded-2xl bg-neutral-900/40 border border-white/5 p-4 backdrop-blur-sm">
+                <div className="flex-1 rounded-xl sm:rounded-2xl bg-neutral-900/40 border border-white/5 p-2 sm:p-4 backdrop-blur-sm">
                     <ChatWindow
                         chatroomId={id}
                         initialMessages={messages || []}

@@ -40,6 +40,16 @@ const NAV_ITEMS = [
             </svg>
         ),
     },
+    {
+        label: "Profile",
+        href: "/profile",
+        icon: (
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+            </svg>
+        ),
+    },
 ];
 
 export default function NavTabs() {
@@ -49,25 +59,32 @@ export default function NavTabs() {
         <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/10">
             {NAV_ITEMS.map((item) => {
                 const isActive =
-                    item.href === "/thread"
-                        ? pathname.startsWith("/thread")
-                        : pathname === item.href;
+                    pathname === item.href || pathname.startsWith(item.href + "/");
+                const isProfile = item.href === "/profile";
 
                 return (
-                    <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`
-                            flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200
-                            ${isActive
-                                ? "bg-purple-600/30 text-purple-300 shadow-[0_0_12px_rgba(147,51,234,0.2)] border border-purple-500/30"
-                                : "text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent"
-                            }
-                        `}
-                    >
-                        {item.icon}
-                        <span className="hidden sm:inline">{item.label}</span>
-                    </Link>
+                    <span key={item.href} className="flex items-center">
+                        {/* Subtle divider before profile */}
+                        {isProfile && (
+                            <span className="w-px h-5 bg-white/10 mx-1" />
+                        )}
+                        <Link
+                            href={item.href}
+                            className={`
+                                flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap
+                                ${isActive
+                                    ? "bg-purple-600/30 text-purple-300 shadow-[0_0_12px_rgba(147,51,234,0.2)] border border-purple-500/30"
+                                    : "text-neutral-400 hover:text-white hover:bg-white/5 border border-transparent"
+                                }
+                            `}
+                        >
+                            {item.icon}
+                            {/* Profile is icon-only, others show label on sm+ */}
+                            {!isProfile && (
+                                <span className="hidden sm:inline">{item.label}</span>
+                            )}
+                        </Link>
+                    </span>
                 );
             })}
         </div>

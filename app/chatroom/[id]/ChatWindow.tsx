@@ -202,11 +202,11 @@ export default function ChatWindow({
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-180px)] max-h-[700px]">
+        <div className="flex flex-col h-[calc(100dvh-200px)] sm:h-[calc(100vh-180px)] sm:max-h-[700px]">
             {/* Messages area */}
             <div
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto px-1 py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+                className="flex-1 overflow-y-auto px-1 py-2 sm:py-4 space-y-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
             >
                 {/* Load More button */}
                 {hasMore && (

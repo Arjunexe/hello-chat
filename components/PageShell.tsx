@@ -28,22 +28,33 @@ export default async function PageShell({ title, children, rightContent }: PageS
             </div>
 
             {/* --- CONTENT --- */}
-            <div className="relative z-20 flex flex-col items-center w-full min-h-screen py-8 px-4">
+            <div className="relative z-20 flex flex-col items-center w-full min-h-screen py-4 sm:py-8 px-3 sm:px-4">
                 {/* Header */}
-                <div className="w-full max-w-3xl mb-8 grid grid-cols-3 items-center">
-                    <div className="shrink-0">
-                        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-                        <p className="text-sm text-neutral-400">
-                            {session?.user?.name
-                                ? `Welcome, ${session.user.name}`
-                                : <span>Browsing as guest · <Link href="/login" className="text-purple-400 hover:underline">Login</Link></span>
-                            }
-                        </p>
+                <div className="w-full max-w-3xl mb-4 sm:mb-8 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    {/* Title + welcome - row with right content on mobile */}
+                    <div className="flex items-center justify-between sm:block sm:shrink-0">
+                        <div className="shrink-0">
+                            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">{title}</h1>
+                            <p className="text-xs sm:text-sm text-neutral-400">
+                                {session?.user?.name
+                                    ? <Link href="/profile" className="hover:text-purple-400 transition-colors">Welcome, {session.user.name}</Link>
+                                    : <span>Browsing as guest · <Link href="/login" className="text-purple-400 hover:underline">Login</Link></span>
+                                }
+                            </p>
+                        </div>
+                        {/* Right content shows inline on mobile */}
+                        <div className="flex items-center gap-2 sm:hidden">
+                            {rightContent}
+                        </div>
                     </div>
+
+                    {/* Nav tabs - centered */}
                     <div className="flex justify-center">
                         <NavTabs />
                     </div>
-                    <div className="flex items-center justify-end gap-3">
+
+                    {/* Right content - desktop only */}
+                    <div className="hidden sm:flex items-center justify-end gap-3 sm:shrink-0">
                         {rightContent}
                     </div>
                 </div>
